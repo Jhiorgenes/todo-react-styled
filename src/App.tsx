@@ -1,17 +1,19 @@
 import { Header, Main, NewTaskArea, Spacer } from './styles'
-import { Root, Indicator } from '@radix-ui/react-checkbox'
 import { Check, Eye, EyeSlash, Trash } from 'phosphor-react'
+import * as Checkbox from '@radix-ui/react-checkbox'
 import { GlobalStyles } from './GlobalStyles'
-import { ChangeEvent, useState } from 'react'
+import { ChangeEvent, useEffect, useState } from 'react'
+import { api } from './libs/api'
+import { v4 as uuid } from 'uuid'
+
+interface TaskProps {
+  id: string
+  name: string
+  done: boolean
+}
 
 export const App = () => {
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      name: 'Give Jhoseph a bath',
-      done: true,
-    },
-  ])
+  const [tasks, setTasks] = useState<TaskProps[]>([])
   const [isHidingCompletedTasks, setIsHidingCompletedTasks] = useState(false)
   const [newTaskName, setNewTaskName] = useState('')
 
@@ -20,7 +22,36 @@ export const App = () => {
     ? tasks.filter(task => !task.done)
     : tasks
 
-  const handleChangeChecked = (id: number) => {
+  async function getAllTasks() {
+    try {
+      const response = await api.get('/todos')
+      console.log(response.data)
+
+      setTasks(response.data)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleAddNewTask = async (e: ChangeEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    try {
+      const response = await api.post('/todos', {
+        name: newTaskName,
+      })
+      getAllTasks()
+      setNewTaskName('')
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  async function handleDeleteTask(id: string) {
+    const response = await api.delete(`/todos/${id}`)
+    getAllTasks()
+  }
+
+  function handleChangeChecked(id: string) {
     setTasks(prevTasks => {
       return prevTasks.map(task => {
         if (task.id === id) {
@@ -34,28 +65,13 @@ export const App = () => {
     })
   }
 
-  const handleAddNewTask = (e: ChangeEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setTasks(prevTasks => [
-      ...prevTasks,
-      {
-        id: prevTasks.length + 1,
-        name: newTaskName,
-        done: false,
-      },
-    ])
-    setNewTaskName('')
-  }
-
-  const handleDeleteTask = (id: number) => {
-    setTasks(prevTasks => {
-      return prevTasks.filter(task => task.id !== id)
-    })
-  }
-
   const handleHideCompletedTasks = () => {
     setIsHidingCompletedTasks(prevHideCompletedTasks => !prevHideCompletedTasks)
   }
+
+  useEffect(() => {
+    getAllTasks()
+  }, [])
 
   return (
     <>
@@ -94,19 +110,19 @@ export const App = () => {
           {filteredTasks.map(task => (
             <div className="task-item" key={task.id}>
               <div>
-                <Root
+                <Checkbox.Root
                   checked={task.done}
                   onCheckedChange={() => handleChangeChecked(task.id)}
-                  id={task.id.toString()}
+                  id={task.id}
                 >
-                  <Indicator className="checkbox-indicator">
+                  <Checkbox.Indicator className="checkbox-indicator">
                     <Check size={18} color="#fff" />
-                  </Indicator>
-                </Root>
+                  </Checkbox.Indicator>
+                </Checkbox.Root>
                 <label
                   className={`
                   ${task.done ? 'lineThrough' : ''}`}
-                  htmlFor={task.id.toString()}
+                  htmlFor={task.id}
                 >
                   {task.name}
                 </label>
