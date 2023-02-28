@@ -1,10 +1,10 @@
 import { Header, Main, NewTaskArea, Spacer } from './styles'
 import { Check, Eye, EyeSlash, Trash } from 'phosphor-react'
+import { ChangeEvent, useEffect, useState } from 'react'
 import * as Checkbox from '@radix-ui/react-checkbox'
 import { GlobalStyles } from './GlobalStyles'
-import { ChangeEvent, useEffect, useState } from 'react'
 import { api } from './libs/api'
-import { v4 as uuid } from 'uuid'
+import todoImage from './assets/todo.jpg'
 
 interface TaskProps {
   id: string
@@ -13,9 +13,9 @@ interface TaskProps {
 }
 
 export const App = () => {
+  const [newTaskName, setNewTaskName] = useState('')
   const [tasks, setTasks] = useState<TaskProps[]>([])
   const [isHidingCompletedTasks, setIsHidingCompletedTasks] = useState(false)
-  const [newTaskName, setNewTaskName] = useState('')
 
   const completedTasks = tasks.filter(task => task.done)
   const filteredTasks = isHidingCompletedTasks
@@ -46,12 +46,29 @@ export const App = () => {
     }
   }
 
+  async function handleUpdateTask(id: string, done: boolean) {
+    try {
+      const response = await api.put(`/todos/${id}`, {
+        done,
+      })
+      getAllTasks()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   async function handleDeleteTask(id: string) {
     const response = await api.delete(`/todos/${id}`)
     getAllTasks()
   }
 
   function handleChangeChecked(id: string) {
+    const task = tasks.find(task => task.id === id)
+    if (!task) return
+
+    const done = !task.done
+    handleUpdateTask(id, done)
+
     setTasks(prevTasks => {
       return prevTasks.map(task => {
         if (task.id === id) {
@@ -81,7 +98,7 @@ export const App = () => {
           <p>Let's stop procrastinating... eventually.</p>
         </div>
         <div>
-          <img src="https://github.com/jhiorgenes.png" alt="" />
+          <img src={todoImage} alt="" />
         </div>
       </Header>
 
